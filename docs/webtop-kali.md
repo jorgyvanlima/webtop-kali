@@ -196,3 +196,9 @@ Para detalhes técnicos, justificativas e um texto pronto para inclusão no corp
 ## Orquestração e gestão multiusuário (resumo)
 
 Para lidar com provisionamento de uma instância por usuário e escalar o ambiente, este trabalho recomenda estudar e adotar uma solução de orquestração. Ver `docs/orquestracao.md` para um estudo completo das alternativas (Docker Compose, Docker Swarm, Kubernetes, Kasm Workspaces) e recomendações operacionais.
+
+---
+
+## Ferramenta de gestão — Portainer
+
+Para facilitar a operação e a gestão dos containers no laboratório, optou‑se por instalar o Portainer como painel web de administração. O Portainer fornece uma interface gráfica para criar, monitorar e remover containers e stacks, e pode acelerar o provisionamento de instâncias Kali por usuário em cenários de demonstração e ensino. Para detalhes de instalação, configuração e limitações, ver [docs/portainer.md](docs/portainer.md).
