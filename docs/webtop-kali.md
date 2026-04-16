@@ -174,3 +174,19 @@ Este trabalho foi desenvolvido pelo Grupo D como parte do curso de Especializaç
 ---
 
 Arquivo gerado automaticamente para complementar o relatório de projeto; para alterações ou tradução para formato PDF/LaTeX, recomenda-se converter este Markdown e ajustar as referências conforme normas da banca.
+
+---
+
+## Limitação técnica adicional — Sessão gráfica única por container
+
+Durante a validação experimental do protótipo foi observada uma limitação arquitetural relevante: o ambiente opera no modelo "single‑seat", ou seja, cada container fornece uma única sessão gráfica (X11/Wayland/KasmVNC). Assim, quando múltiplos clientes se conectam simultaneamente à mesma instância, a sessão gráfica pode trocar de foco para o último cliente conectado, ocasionando perda de sessão, tela em branco ou desconexão dos usuários anteriores.
+
+Esta condição é uma limitação conhecida de soluções baseadas em VNC/Web Desktop e decorre da existência de um único `DISPLAY` por container. Não se trata de um bug no protótipo, mas sim de uma restrição arquitetural que deve ser explicitada na dissertação.
+
+Soluções recomendadas:
+
+- Provisionamento de um container por usuário (recomendado para laboratórios): cada usuário tem sua própria instância, garantindo isolamento e estabilidade.
+- Adoção de plataformas especializadas (por exemplo, Kasm Workspaces) que gerenciam sessões isoladas e autenticação.
+- Uso de máquinas virtuais por usuário quando a compatibilidade gráfica exigir recursos que containers não atendem satisfatoriamente.
+
+Para detalhes técnicos, justificativas e um texto pronto para inclusão no corpo da dissertação, ver [docs/limitacoes-multiusuario.md](docs/limitacoes-multiusuario.md).
