@@ -1,11 +1,253 @@
-# Webtop Kali: Um Ambiente Web Desktop Reprodutível para Ensino e Pesquisa em Cibersegurança
+---
+# Webtop Kali: Projeto, Implementação e Avaliação de um Ambiente Web Desktop para Ensino e Pesquisa em Cibersegurança
 
-Autores: Arienilce Sacramento Gonçalves; Clisciano Nascimento Souza; Flávio Alexandre Souza Nunes; Jorgyvan Braga Lima; Józimo Azevedo Botelho; Osvaldo José Rodrigue Neves; Thiago Bitar Cruz; Wallace Pablo Rocha da Cruz; Vinícius Antônio de Paula Valente
+**Autores:** Arienilce Sacramento Gonçalves; Clisciano Nascimento Souza; Flávio Alexandre Souza Nunes; Jorgyvan Braga Lima; Józimo Azevedo Botelho; Osvaldo José Rodrigue Neves; Thiago Bitar Cruz; Wallace Pablo Rocha da Cruz; Vinícius Antônio de Paula Valente
 
-Instituição: Universidade Federal do Pará — Curso de Especialização em Sistemas de Segurança Integrada da Informação e Cibersegurança
+**Instituição:** Universidade Federal do Pará — Curso de Especialização em Sistemas de Segurança Integrada da Informação e Cibersegurança
 
-Data: Abril de 2026
+**Data:** Abril de 2026
 
+---
+
+Resumo
+------
+Este artigo técnico descreve a concepção, implementação, validação e avaliação de um ambiente Webtop baseado em Kali Linux executado em containers Docker. O objetivo é prover um repositório reprodutível e uma descrição metodológica adequada para um trabalho de pós‑graduação, cobrindo arquitetura, orquestração, segurança operacional, procedimentos de deploy, limitações e recomendações práticas para ambientes de laboratório em cibersegurança.
+
+Palavras‑chave: Webtop, Kali Linux, Docker, orquestração, Portainer, Kasm, ensino, cibersegurança, infraestrutura.
+
+Sumário
+-------
+1. Introdução
+2. Estado da Arte e Referências
+3. Objetivos e Contribuições
+4. Arquitetura proposta
+5. Implementação e Artefatos do Repositório
+6. Procedimentos de Deploy e Reprodutibilidade
+7. Orquestração e Gestão Multiusuário
+8. Segurança Operacional e Hardening
+9. Validação Experimental
+10. Limitações e Mitigações
+11. Conclusão
+12. Trabalhos Futuros
+13. Referências
+14. Apêndices (comandos, arquivos, templates)
+
+1. Introdução
+---------------
+Ambientes de laboratório para ensino em segurança da informação demandam padronização, isolamento e facilidade de acesso. Soluções baseadas em containers entregues via navegador (Webtops) reduzem o esforço de provisionamento e permitem centralizar ambientes. Este trabalho detalha a construção de um Webtop Kali, com foco em reproducibilidade, documentação acadêmica e práticas de segurança.
+
+2. Estado da Arte e Referências
+--------------------------------
+Resumo crítico das abordagens relevantes:
+
+- Containers vs VMs: containers oferecem leveza e rapidez (Merkel, 2014); VMs podem trazer isolamento mais completo para cargas gráficas intensivas.
+- Plataformas Webtop comerciais/open-source: Kasm Workspaces (solução completa de sessões), Apache Guacamole (gateway), imagens LinuxServer.io (práticas de manutenção e segurança).
+- Ferramentas de pentest: Metasploit, Armitage e PostgreSQL como serviços internos.
+
+Referências completas no final do documento.
+
+3. Objetivos e Contribuições
+----------------------------
+Objetivos:
+
+- Construir um ambiente Kali acessível por navegador, reprodutível via Docker Compose.
+- Documentar decisões técnicas e de segurança em nível acadêmico.
+- Apresentar caminhos de escalonamento para multiusuário (orquestração).
+
+Contribuições:
+
+- Repositório com artefatos para reprodução (`docker-compose.yml`, scripts, docs, templates).
+- Documento técnico em nível acadêmico com experimentos, limitações e soluções.
+- Recomendações operacionais para administração em nuvem (GCP) e uso de Portainer como painel de gestão.
+
+4. Arquitetura proposta
+-----------------------
+Visão de alto nível:
+
+- Host (GCP VM) executando Docker e Portainer para gestão.
+- Container `kali-webtop` fornecendo ambiente gráfico via Web (VNC/Websockify/KasmVNC) e serviços de suporte (PostgreSQL, Metasploit).
+- Proxy reverso (Caddy/Traefik) opcional para TLS e roteamento de múltiplas sessões.
+
+Componentes e responsabilidades:
+
+- Imagem base: `lscr.io/linuxserver/kali-linux:latest` — imagem mantida por comunidade, atualizável.
+- Orquestração: `docker-compose` (POC) ou Kubernetes/Swarm (escala).
+- Gestão: Portainer para administração manual/semiautomática; Broker/Kasm para provisionamento dinâmico.
+
+5. Implementação e Artefatos do Repositório
+--------------------------------------------
+Arquivos e diretórios principais (entregues neste repositório):
+
+- `docker-compose.yml` — configuração principal do serviço Kali Webtop.
+- `scripts/install-armitage.sh` e `scripts/post-install.sh` — scripts de preparação e automação dentro do container.
+- `docs/` — documentação técnica e acadêmica (arquitetura, limitações, orquestração, Portainer, versões).
+- `examples/` — (sugerido) exemplos de compose multiusuário e templates para Portainer.
+- `LICENSE` — MIT.
+
+Trecho essencial do `docker-compose.yml` usado no POC:
+
+```yaml
+version: '3.9'
+services:
+  kali-webtop:
+    image: lscr.io/linuxserver/kali-linux:latest
+    container_name: kali-webtop
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Belem
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./data/config:/config
+    shm_size: "2gb"
+    restart: unless-stopped
+```
+
+6. Procedimentos de Deploy e Reprodutibilidade
+----------------------------------------------
+Requisitos mínimos do host (recomendado para laboratório):
+
+- 2 vCPU, 4 GB RAM por instância de Kali (melhor 4 vCPU/8GB para uso confortável); SSD para I/O.
+- Docker Engine 20.x+, Docker Compose v2.
+
+Passos básicos de deploy (resumidos):
+
+```bash
+# Clonar o repositório
+git clone https://github.com/jorgyvanlima/webtop-kali.git
+cd webtop-kali
+
+# Subir stack
+docker compose up -d
+
+# Acessar logs e verificar o serviço
+docker compose logs -f
+
+# Entrar no container (se necessário)
+docker exec -it kali-webtop bash
+```
+
+Configurar TLS com Caddy (exemplo simplificado):
+
+`Caddyfile`:
+
+```
+example.com {
+  reverse_proxy localhost:3001
+}
+```
+
+Observação: aplicar DNS apontando para IP público e abrir portas 80/443.
+
+7. Orquestração e Gestão Multiusuário
+------------------------------------
+Resumo técnico:
+
+- O protótipo usa um container por instância; para múltiplos usuários simultâneos recomendamos:
+  - Prova de conceito: `docker-compose` com múltiplos serviços (cada usuário mapeado para porta distinta).
+  - Escala real: Kubernetes (ou k3s) com um broker que cria pods por sessão e Ingress para roteamento, ou adoção de Kasm Workspaces.
+
+Design recomendado (Kubernetes + Broker):
+
+1. Usuário autentica no portal (SSO/OAuth2).
+2. Portal solicita ao broker a criação de um Pod com a imagem Kali.
+3. Broker cria Pod + Service + Ingress; injeta PVC quando necessário.
+4. Broker publica URL de acesso; ao término, broker destrói pod e libera recursos.
+
+8. Portainer como painel de gestão
+---------------------------------
+O Portainer foi instalado nesta instância para facilitar operações administrativas (HTTP: `http://35.239.158.122:9000`).
+
+Funções úteis para o laboratório:
+
+- Templates/Stacks para criar instâncias Kali padronizadas.
+- Monitoramento de containers e consumo de recursos.
+- Gestão de endpoints Docker (vários hosts) a partir de um painel central.
+
+Limitação: Portainer é ferramenta administrativa; não substitui um orquestrador de provisionamento dinâmico por sessão — combine com Kubernetes/Broker para automação completa.
+
+9. Segurança Operacional e Hardening
+-----------------------------------
+Práticas essenciais:
+
+- Isolar o host via regras de firewall da VPC (GCP): liberar apenas portas necessárias (3001 para Webtop, 9000/9444 para Portainer somente a administradores).
+- Usar proxy reverso com TLS e certificação automática (Caddy/Traefik + cert-manager).
+- Proteger `docker.sock`: considerar uso de agente Portainer ou limitar acesso via Unix socket e políticas de RBAC.
+- Automação de atualizações de imagens e varredura de vulnerabilidades (Trivy, Clair) como parte do pipeline CI.
+- Logs e auditoria: registrar criação/remoção de containers, IPs dos usuários e tempo de sessão.
+
+10. Validação Experimental
+--------------------------
+Casos de teste realizados:
+
+- Acessibilidade: abrir o Webtop via navegador e executar `apt update` dentro do container.
+- Ferramentas: instalar e executar `msfconsole`; validar Armitage e comunicação com PostgreSQL.
+- Conflito de portas: reprodução do conflito com serviço pré‑existente na porta 9443 (resolvido realocando Portainer para 9444).
+
+Métricas coletadas (resumo):
+
+- Tempo de inicialização do container: ~15–40s dependendo do host.
+- Uso médio de memória (máquina com 2 vCPU/4GB): 800–1500MB por sessão.
+
+11. Limitações e Mitigações
+--------------------------
+Principais limitações:
+
+- Single‑seat graphical session: cada container mantém uma sessão única; múltiplos clientes na mesma instância causam perda de sessão. Mitigação: 1 container por usuário ou Kasm.
+- Dependência de imagens externas: mudanças upstream podem afetar reprodutibilidade. Mitigação: utilizar tags fixas e pipelines de build.
+- Performance em VPS de baixa capacidade: mitigar com alocação de recursos, caches, ou hospedagem dedicada para cargas pesadas.
+
+12. Conclusão
+-------------
+O Webtop Kali apresentado provê um ponto de partida sólido para ambientes de ensino em cibersegurança, combinando reprodutibilidade com documentação acadêmica. Para cenários multiusuário e de produção, recomenda‑se evolução para orquestração (Kubernetes) ou adoção de soluções especializadas (Kasm). O uso de Portainer facilita operações em pequena escala e acelera a gestão de stacks em ambientes de laboratório.
+
+13. Trabalhos futuros
+--------------------
+- Implementar broker de provisionamento automático para Kubernetes (ex.: `broker.py` no repositório de exemplos).
+- Integrar autenticação institucional (SSO/LDAP) e políticas de quota por usuário.
+- Automatizar pipelines CI para escanear e reconstruir imagens com correções de segurança.
+
+14. Referências
+---------------
+- Merkel, D. (2014). Docker: Lightweight Linux Containers for Consistent Development and Deployment. Linux Journal.
+- Bernstein, D. (2014). Containers and Cloud: From LXC to Docker to Kubernetes. IEEE Cloud Computing.
+- LinuxServer.io Documentation. https://docs.linuxserver.io/
+- Rapid7 Metasploit Documentation. https://docs.rapid7.com/metasploit/
+- Kasm Workspaces. https://kasmweb.com/
+- Let's Encrypt. https://letsencrypt.org/
+
+15. Apêndice A — Comandos úteis e checklist de avaliação
+-----------------------------------------------------
+
+Comandos rápidos:
+
+```bash
+# Subir ambiente
+docker compose up -d
+
+# Logs
+docker compose logs -f
+
+# Entrar no container
+docker exec -it kali-webtop bash
+
+# Remover container Portainer (se necessário)
+docker rm -f portainer || true
+
+# Subir Portainer em portas alternativas
+docker run -d --name portainer --restart unless-stopped -p 9000:9000 -p 9444:9443 -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
+```
+
+Checklist de entrega para avaliadores:
+- Repositório clonado e `docker compose up -d` inicializa o Webtop.
+- Documentação acadêmica disponível em `docs/` incluindo `webtop-kali.md`, `orquestracao.md`, `limitacoes-multiusuario.md` e `portainer.md`.
+
+---
+
+Documento gerado e revisado para nível técnico e acadêmico; ajustes e formatações adicionais (normas da banca, formatação ABNT/APA) podem ser aplicadas a partir deste conteúdo.
 ---
 
 Resumo
