@@ -190,3 +190,9 @@ Soluções recomendadas:
 - Uso de máquinas virtuais por usuário quando a compatibilidade gráfica exigir recursos que containers não atendem satisfatoriamente.
 
 Para detalhes técnicos, justificativas e um texto pronto para inclusão no corpo da dissertação, ver [docs/limitacoes-multiusuario.md](docs/limitacoes-multiusuario.md).
+
+---
+
+## Orquestração e gestão multiusuário (resumo)
+
+Para lidar com provisionamento de uma instância por usuário e escalar o ambiente, este trabalho recomenda estudar e adotar uma solução de orquestração. Ver `docs/orquestracao.md` para um estudo completo das alternativas (Docker Compose, Docker Swarm, Kubernetes, Kasm Workspaces) e recomendações operacionais.
